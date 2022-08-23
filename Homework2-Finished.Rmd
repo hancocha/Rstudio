@@ -1,0 +1,102 @@
+---
+title: "Homework2-Group-Finished"
+author: "Hayden, Cameron, Jared"
+date: "3/1/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Q1) load the file "LaptopSalesJanuary2008.csv" and assign it to a local object 
+# named LSJ. Then, report the first six rows of the dataset and show all the data 
+# in a new tab. Eventually, produce the dimensions of the data frame in addition to 
+# the class and the mean of every column. For this question, you can just complete 
+# the following lines.
+```{r}
+#library(readr)
+LSJ<-read.csv('LaptopSalesJanuary2008.csv',header=TRUE)
+head(LSJ)
+View(LSJ)
+dim(LSJ)
+sapply(LSJ,class)
+mapply(mean,LSJ)
+```
+# Q2) How many NAs are in the dataset? How many rows include at least one NA? Replace 
+# the NAs in the "CustomerStoreDistance" column by the median of the rest of the values 
+# in the same column. Check the number of complete rows again to make sure you have 
+# successfully replaced the NAs in that column. (The number should have decreased to 8.)
+```{r}
+sum(is.na(LSJ))
+LSJ_ROWNA <- sum(!complete.cases(LSJ))
+LSJ_ROWNA
+LSJ$CustomerStoreDistance[is.na(LSJ$CustomerStoreDistance)]<-median(LSJ$CustomerStoreDistance,na.rm=TRUE)
+sum(is.na(LSJ$CustomerStoreDistance))
+sum(is.na(LSJ))
+```
+# Q3) Keep the subset of the data frame ranging from columns 5 through 10 (inclusive), 
+# and assign this subset to a local object named LSJ1. How many NAs exist in this 
+# new data frame?
+```{r}
+LSJ1<-LSJ[,c(5:10)]
+sum(is.na(LSJ1))
+```
+# Q4) List the unique values in each of the columns of LSJ1. From the lecture slides, 
+# recall the usage of the "table" function to obtain the frequency of each unique 
+# value in a series. Apply the table function to every column of LSJ1.
+```{r}
+sapply(LSJ1,table)
+```
+# Q5) Take a random sample of 100 observations from LSJ1. Show only the "head" of 
+# the resulting sample.
+# # Also notice that items with a price greater than $600 constitue a small portion 
+# of the dataset. From LSJ1, oversample such items in the following way. Sample 100 
+# observations such that the probability of obtaining an item with a price greater 
+# than $600 is 95% (and the probability of obtaining an item with a price less than 
+# $600 is 5%). Show only the "head" of the resulting sample.
+```{r}
+LSJ2<-LSJ1[sample(row.names(LSJ1),100),]
+head(LSJ2)
+LSJ3<-sample(row.names(LSJ1),100,prob=ifelse(LSJ1$Retail.Price>600,0.95,0.05))
+head(LSJ1[LSJ3,])
+```
+# Q6) Notice that there is only one categorical variable of character type in LSJ1. 
+# Think about the number of categories this variable takes and decide how many dummy 
+# variables you will need to replace it. Use either the "dummies" package or the model.matrix 
+# function to generate just as many dummy variables as you "require" (don't go beyond), 
+# replace the current categorical variable with the dummy variable(s), and assign 
+# the output to a local object named "LSJ2". Finally, show the head of LSJ2.
+```{r}
+IntegratedDummy <-model.matrix(~0+ Integrated.Wireless., LSJ)
+LSJ1<-cbind(LSJ1,IntegratedDummy)
+LSJ2<-subset(LSJ1, select = -c(Integrated.Wireless.))
+head(LSJ2)
+```
+# Q7) Partition LSJ2 into training set (40%), validation set (30%), and test set 
+# (30%). Don't miss "set.seed".
+```{r}
+set.seed(1)
+train_rows<-sample(rownames(LSJ2),nrow(LSJ2)*.4)
+train_data<-LSJ2[train_rows,]
+valid_rows<-sample(setdiff(rownames(LSJ2),train_rows),nrow(LSJ2)*.3)
+valid_data<-LSJ2[valid_rows,]
+test_rows<-setdiff(rownames(LSJ2),valid_rows)
+test_data<-LSJ2[test_rows,]
+```
+# Q8) Fit a linear regression model to the training set (partitioned from LSJ2) 
+# with Retail.Price as the target and the rest of the variables as predictors.
+```{r}
+reg<-lm(train_data$Retail.Price~train_data$Screen.Size..Inches.+train_data$Battery.Life..Hours.+train_data$RAM..GB.+train_data$Processor.Speeds..GHz.+train_data$Integrated.Wireless.No)
+reg
+```
+# Q9) Apply the regression model to the validation set.
+```{r}
+library(forecast)
+pred<-predict(reg,newdata=valid_data)
+```
+# Q10) Compute the evaluation metrics for both the training and prediction sets.
+```{r}
+accuracy(reg$fitted.values, train_data$Retail.Price)
+accuracy(pred,valid_data$Retail.Price)
+```
+
